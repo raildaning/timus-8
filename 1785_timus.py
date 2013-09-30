@@ -30,7 +30,7 @@ def translate_count(count):
     for result, func in truth_table.items():
         if func(count):
             return result
-
+    return None
 
 x = input().strip()
 print(translate_count(int(x)))
