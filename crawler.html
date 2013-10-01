@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>crawler</title>
-<!-- 2013-10-01 Вт. 13:28 -->
+<!-- 2013-10-02 Ср. 00:15 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="pimiento" />
@@ -234,13 +234,6 @@ logging.basicConfig(filename=<span style="color: #ffa07a;">'/tmp/logfile.txt'</s
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   PASSWORD = <span style="color: #ffa07a;">"PASSWORD"</span>
 
 
-<span style="color: #eedd82;">cj</span> = CookieJar()
-<span style="color: #eedd82;">opener</span> = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-<span style="color: #eedd82;">data</span> = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
-<span style="color: #eedd82;">response</span> = opener.open(AUTH_URL, data)
-
 <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">fill_dict</span>(task):
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status, num, name, <span style="color: #b0c4de;">_</span>, <span style="color: #b0c4de;">_</span>, price = task.getchildren()
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> status.find(<span style="color: #ffa07a;">'a'</span>):
@@ -249,14 +242,19 @@ logging.basicConfig(filename=<span style="color: #ffa07a;">'/tmp/logfile.txt'</s
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status = <span style="color: #00ffff; font-weight: bold;">False</span>
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> {num.text_content(): [status, name.text_content(), price.text_content<span style="color: #DC8CC3; background-color: #3F3F3F;">()]}</span>
 
-<span style="color: #eedd82;">opener</span> = urllib2.build_opener()
+<span style="color: #eedd82;">cj</span> = CookieJar()
+<span style="color: #eedd82;">opener</span> = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span style="color: #ffa07a;">'Locale=Russian'</span>))
+<span style="color: #eedd82;">data</span> = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
+<span style="color: #eedd82;">response</span> = opener.open(AUTH_URL, data)
+
 <span style="color: #eedd82;">fd</span> = opener.open(TASKS_URL)
 
 <span style="color: #eedd82;">doc</span> = html.fromstring(fd.read())
-<span style="color: #eedd82;">body</span> = doc.body
 
-<span style="color: #eedd82;">tasks_list</span> = body.find_class(<span style="color: #ffa07a;">'content'</span>)
+<span style="color: #eedd82;">tasks_list</span> = doc.body.find_class(<span style="color: #ffa07a;">'content'</span>)
 
 <span style="color: #eedd82;">tasks_dict</span> = {}
 <span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> tasks_list:
@@ -319,6 +317,7 @@ opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span s
 
 <pre class="src src-python" id="get_cookies"><span style="color: #eedd82;">cj</span> = CookieJar()
 <span style="color: #eedd82;">opener</span> = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span style="color: #ffa07a;">'Locale=Russian'</span>))
 <span style="color: #eedd82;">data</span> = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
@@ -327,14 +326,11 @@ opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span s
 </div>
 
 <p>
-Получаем сырой xhtml, но нужно указать правильную локаль,
-чтобы получить задачи на русском языке.
+Получаем сырой xhtml
 </p>
 <div class="org-src-container">
 
-<pre class="src src-python" id="get_data"><span style="color: #eedd82;">opener</span> = urllib2.build_opener()
-opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span style="color: #ffa07a;">'Locale=Russian'</span>))
-<span style="color: #eedd82;">fd</span> = opener.open(TASKS_URL)
+<pre class="src src-python" id="get_data"><span style="color: #eedd82;">fd</span> = opener.open(TASKS_URL)
 </pre>
 </div>
 
@@ -344,7 +340,6 @@ opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span s
 <div class="org-src-container">
 
 <pre class="src src-python" id="to_xml"><span style="color: #eedd82;">doc</span> = html.fromstring(fd.read())
-<span style="color: #eedd82;">body</span> = doc.body
 </pre>
 </div>
 
@@ -353,7 +348,7 @@ opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span s
 </p>
 <div class="org-src-container">
 
-<pre class="src src-python" id="get_content"><span style="color: #eedd82;">tasks_list</span> = body.find_class(<span style="color: #ffa07a;">'content'</span>)
+<pre class="src src-python" id="get_content"><span style="color: #eedd82;">tasks_list</span> = doc.body.find_class(<span style="color: #ffa07a;">'content'</span>)
 </pre>
 </div>
 
@@ -414,7 +409,7 @@ opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span s
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: pimiento</p>
-<p class="date">Created: 2013-10-01 Вт. 13:28</p>
+<p class="date">Created: 2013-10-02 Ср. 00:15</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 24.1.1 (<a href="http://orgmode.org">Org</a> mode 8.1.2)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

@@ -44,13 +44,6 @@ except IOError, e:
     PASSWORD = "PASSWORD"
 
 
-cj = CookieJar()
-opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-data = urllib.urlencode({"Action": "edit",
-                         "JudgeID": JUDGE_ID,
-                         "Password": PASSWORD})
-response = opener.open(AUTH_URL, data)
-
 def fill_dict(task):
     status, num, name, _, _, price = task.getchildren()
     if status.find('a'):
@@ -59,14 +52,19 @@ def fill_dict(task):
         status = False
     return {num.text_content(): [status, name.text_content(), price.text_content()]}
 
-opener = urllib2.build_opener()
+cj = CookieJar()
+opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 opener.addheaders.append(('Cookie', 'Locale=Russian'))
+data = urllib.urlencode({"Action": "edit",
+                         "JudgeID": JUDGE_ID,
+                         "Password": PASSWORD})
+response = opener.open(AUTH_URL, data)
+
 fd = opener.open(TASKS_URL)
 
 doc = html.fromstring(fd.read())
-body = doc.body
 
-tasks_list = body.find_class('content')
+tasks_list = doc.body.find_class('content')
 
 tasks_dict = {}
 for task in tasks_list:

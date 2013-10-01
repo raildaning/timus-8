@@ -46,9 +46,9 @@
 
     <<get_secrets>>
 
-    <<get_cookies>>
-
     <<fill_dict>>
+
+    <<get_cookies>>
 
     <<get_data>>
 
@@ -106,18 +106,16 @@
   #+begin_src python
     cj = CookieJar()
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+    opener.addheaders.append(('Cookie', 'Locale=Russian'))
     data = urllib.urlencode({"Action": "edit",
                              "JudgeID": JUDGE_ID,
                              "Password": PASSWORD})
     response = opener.open(AUTH_URL, data)
   #+end_src
 
-  Получаем сырой xhtml, но нужно указать правильную локаль,
-  чтобы получить задачи на русском языке.
+  Получаем сырой xhtml
   #+name: get_data
   #+begin_src python
-    opener = urllib2.build_opener()
-    opener.addheaders.append(('Cookie', 'Locale=Russian'))
     fd = opener.open(TASKS_URL)
   #+end_src
 
@@ -125,13 +123,12 @@
   #+name: to_xml
   #+begin_src python
     doc = html.fromstring(fd.read())
-    body = doc.body
   #+end_src
 
   Каждая запись задачи хранится в элементе tr с классом /content/
   #+name: get_content
   #+begin_src python
-    tasks_list = body.find_class('content')
+    tasks_list = doc.body.find_class('content')
   #+end_src
 
   Мы будем хранить наши записи в дикте вида
