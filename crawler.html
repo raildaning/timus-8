@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>crawler</title>
-<!-- 2013-10-01 Вт. 12:02 -->
+<!-- 2013-10-01 Вт. 13:28 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="pimiento" />
@@ -190,15 +190,56 @@ for the JavaScript code in this tag.
 </p>
 <div class="org-src-container">
 
-<pre class="src src-python" id="crawler"><span style="color: #00ffff; font-weight: bold;">import</span> urllib
+<pre class="src src-python" id="crawler"><span style="color: #00ffff; font-weight: bold;">import</span> re
+<span style="color: #00ffff; font-weight: bold;">import</span> os
+<span style="color: #00ffff; font-weight: bold;">import</span> urllib
 <span style="color: #00ffff; font-weight: bold;">import</span> urllib2
+<span style="color: #00ffff; font-weight: bold;">import</span> logging
 <span style="color: #00ffff; font-weight: bold;">from</span> lxml <span style="color: #00ffff; font-weight: bold;">import</span> html
 <span style="color: #00ffff; font-weight: bold;">from</span> cookielib <span style="color: #00ffff; font-weight: bold;">import</span> CookieJar
 
 <span style="color: #eedd82;">TASKS_URL</span> = <span style="color: #ffa07a;">"http://acm.timus.ru/problemset.aspx?page=all"</span>
 <span style="color: #eedd82;">AUTH_URL</span> = <span style="color: #ffa07a;">"http://acm.timus.ru/authedit.aspx"</span>
-<span style="color: #eedd82;">JUDGE_ID</span> = <span style="color: #ffa07a;">"YOUID"</span>
-<span style="color: #eedd82;">PASSWORD</span> = <span style="color: #ffa07a;">"PASS"</span>
+<span style="color: #eedd82;">CONFIG_PATH</span> = <span style="color: #ffa07a;">"./crawler.conf"</span>
+
+logging.basicConfig(filename=<span style="color: #ffa07a;">'/tmp/logfile.txt'</span>, level=logging.DEBUG,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #b0c4de;">format</span>=<span style="color: #ffa07a;">'%(asctime)s - %(levelname)s - %(message)s'</span>)
+
+<span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_secrets</span>():
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> os.path.isfile(CONFIG_PATH):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">with</span> <span style="color: #b0c4de;">open</span>(CONFIG_PATH, <span style="color: #ffa07a;">'r'</span>) <span style="color: #00ffff; font-weight: bold;">as</span> fd:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   config = fd.readlines()
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> parse_config(config)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">raise</span> <span style="color: #98fb98;">IOError</span>(<span style="color: #ffa07a;">"%s is absent!"</span> % CONFIG_PATH)
+
+<span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">parse_config</span>(config):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   JUDGE_ID = <span style="color: #ffa07a;">""</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   PASSWORD = <span style="color: #ffa07a;">""</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   judgeid_regexp = re.compile(r<span style="color: #ffa07a;">'^JUDGE_ID'</span>)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   password_regexp = re.compile(r<span style="color: #ffa07a;">'^PASSWORD'</span>)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   comment_regexp = re.compile(r<span style="color: #ffa07a;">'^#'</span>)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">for</span> line <span style="color: #00ffff; font-weight: bold;">in</span> config:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> comment_regexp.match(line):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">continue</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> judgeid_regexp.match(line):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   JUDGE_ID = line.split(<span style="color: #ffa07a;">':'</span>)[1].strip()
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> password_regexp.match(line):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   PASSWORD = line.split(<span style="color: #ffa07a;">':'</span>)[1].strip()
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> JUDGE_ID, PASSWORD
+
+<span style="color: #00ffff; font-weight: bold;">try</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   JUDGE_ID, PASSWORD = get_secrets()
+<span style="color: #00ffff; font-weight: bold;">except</span> <span style="color: #98fb98;">IOError</span>, e:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   JUDGE_ID = <span style="color: #ffa07a;">"MYID"</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   PASSWORD = <span style="color: #ffa07a;">"PASSWORD"</span>
+
+
+<span style="color: #eedd82;">cj</span> = CookieJar()
+<span style="color: #eedd82;">opener</span> = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+<span style="color: #eedd82;">data</span> = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
+<span style="color: #eedd82;">response</span> = opener.open(AUTH_URL, data)
 
 <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">fill_dict</span>(task):
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status, num, name, <span style="color: #b0c4de;">_</span>, <span style="color: #b0c4de;">_</span>, price = task.getchildren()
@@ -223,27 +264,64 @@ opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span s
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">continue</span>
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   tasks_dict.update(fill_dict(task))
 
-<span style="color: #00ffff; font-weight: bold;">import</span> logging
-
-logging.basicConfig(filename=<span style="color: #ffa07a;">'/tmp/logfile.txt'</span>, level=logging.DEBUG,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #b0c4de;">format</span>=<span style="color: #ffa07a;">'%(asctime)s - %(levelname)s - %(message)s'</span>)
 <span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> tasks_dict:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   logging.debug(u<span style="color: #ffa07a;">'%s: %s'</span> % (task, tasks_dict[task]))
 </pre>
 </div>
 
 <p>
-Чтобы знать именно наши результаты,
-нужно сначала авторизоваться в системе и получить нужные куки
+Подготовим возможность логгировать ход выполения нашего скрипта
 </p>
+<div class="org-src-container">
+
+<pre class="src src-python" id="logging">logging.basicConfig(filename=<span style="color: #ffa07a;">'/tmp/logfile.txt'</span>, level=logging.DEBUG,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #b0c4de;">format</span>=<span style="color: #ffa07a;">'%(asctime)s - %(levelname)s - %(message)s'</span>)
+</pre>
+</div>
+
+<p>
+Чтобы знать именно наши результаты,
+нужно сначала авторизоваться в системе и получить нужные куки,
+но сначала надо получить наши логин и пароль, если мы указали их в отдельном файле
+</p>
+<div class="org-src-container">
+
+<pre class="src src-python" id="get_secrets"><span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_secrets</span>():
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> os.path.isfile(CONFIG_PATH):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">with</span> <span style="color: #b0c4de;">open</span>(CONFIG_PATH, <span style="color: #ffa07a;">'r'</span>) <span style="color: #00ffff; font-weight: bold;">as</span> fd:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   config = fd.readlines()
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> parse_config(config)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">raise</span> <span style="color: #98fb98;">IOError</span>(<span style="color: #ffa07a;">"%s is absent!"</span> % CONFIG_PATH)
+
+<span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">parse_config</span>(config):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   JUDGE_ID = <span style="color: #ffa07a;">""</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   PASSWORD = <span style="color: #ffa07a;">""</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   judgeid_regexp = re.compile(r<span style="color: #ffa07a;">'^JUDGE_ID'</span>)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   password_regexp = re.compile(r<span style="color: #ffa07a;">'^PASSWORD'</span>)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   comment_regexp = re.compile(r<span style="color: #ffa07a;">'^#'</span>)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">for</span> line <span style="color: #00ffff; font-weight: bold;">in</span> config:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> comment_regexp.match(line):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">continue</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> judgeid_regexp.match(line):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   JUDGE_ID = line.split(<span style="color: #ffa07a;">':'</span>)[1].strip()
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> password_regexp.match(line):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   PASSWORD = line.split(<span style="color: #ffa07a;">':'</span>)[1].strip()
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> JUDGE_ID, PASSWORD
+
+<span style="color: #00ffff; font-weight: bold;">try</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   JUDGE_ID, PASSWORD = get_secrets()
+<span style="color: #00ffff; font-weight: bold;">except</span> <span style="color: #98fb98;">IOError</span>, e:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   JUDGE_ID = <span style="color: #ffa07a;">"MYID"</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   PASSWORD = <span style="color: #ffa07a;">"PASSWORD"</span>
+</pre>
+</div>
 <div class="org-src-container">
 
 <pre class="src src-python" id="get_cookies"><span style="color: #eedd82;">cj</span> = CookieJar()
 <span style="color: #eedd82;">opener</span> = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 <span style="color: #eedd82;">data</span> = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    })
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
 <span style="color: #eedd82;">response</span> = opener.open(AUTH_URL, data)
 </pre>
 </div>
@@ -327,11 +405,7 @@ opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span s
 </p>
 <div class="org-src-container">
 
-<pre class="src src-python" id="create_org"><span style="color: #00ffff; font-weight: bold;">import</span> logging
-
-logging.basicConfig(filename=<span style="color: #ffa07a;">'/tmp/logfile.txt'</span>, level=logging.DEBUG,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #b0c4de;">format</span>=<span style="color: #ffa07a;">'%(asctime)s - %(levelname)s - %(message)s'</span>)
-<span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> tasks_dict:
+<pre class="src src-python" id="create_org"><span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> tasks_dict:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   logging.debug(u<span style="color: #ffa07a;">'%s: %s'</span> % (task, tasks_dict[task]))
 </pre>
 </div>
@@ -340,7 +414,7 @@ logging.basicConfig(filename=<span style="color: #ffa07a;">'/tmp/logfile.txt'</s
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: pimiento</p>
-<p class="date">Created: 2013-10-01 Вт. 12:02</p>
+<p class="date">Created: 2013-10-01 Вт. 13:28</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 24.1.1 (<a href="http://orgmode.org">Org</a> mode 8.1.2)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
