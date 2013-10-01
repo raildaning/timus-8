@@ -39,4 +39,4 @@ nosetests.xml
 .project
 .pydevproject
 
-*.crawler.conf
+crawler.conf
