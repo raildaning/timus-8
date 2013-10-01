@@ -1,0 +1,130 @@
+#+OPTIONS: H:3 num:t toc:t \n:nil @:t ::t |:t ^:{} _:{} -:t f:t *:t <:t
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+STYLE: <link rel="stylesheet" type="text/css" href="http://orgmode.org/worg/style/worg-classic.css" />
+
+* Основная идея
+  Необходимо собрать все задачи с [[http://acm.timus.ru/problemset.aspx][timus.ru]]
+  и представить их в виде org-файла (timus.org).
+  - Структура каждой задачи должны быть вида:
+    #+begin_src org
+      ,* {TODO|DONE} имя-задачи                                        :сложность:
+        текст задания
+
+        org-babel вставка с curl-запросом отправки текстового файла tasknum_timus.py
+    #+end_src
+
+  - Создать для каждой задачи файл tasknum_timus.org с содержанием
+    #+name: tasknum_timus
+    #+begin_src org
+      Текст задачи
+
+      ,#+name: имя_задачи
+      ,#+begin_src python :results output :shebang "#!/usr/bin/env python3" :tangle $tasknum_timus.py
+
+      ,#+end_src
+
+    #+end_src
+  - Ключ для обновления только основного файла, не трогающий файлы решений
+
+* Реализация
+  Даные мы будем получать со страницы с таблицей задач
+  #+name: crawler
+  #+begin_src python :shebang "#!/usr/bin/env python2" :results output :tangle crawler.py :exports code :noweb yes
+    import urllib
+    import urllib2
+    from lxml import html
+    from cookielib import CookieJar
+
+    TASKS_URL = "http://acm.timus.ru/problemset.aspx?page=all"
+    AUTH_URL = "http://acm.timus.ru/authedit.aspx"
+    JUDGE_ID = "YOUID"
+    PASSWORD = "PASS"
+
+    <<fill_dict>>
+
+    <<get_data>>
+
+    <<to_xml>>
+
+    <<get_content>>
+
+    <<create_dict>>
+
+    <<create_org>>
+  #+end_src
+
+  Чтобы знать именно наши результаты,
+  нужно сначала авторизоваться в системе и получить нужные куки
+  #+name: get_cookies
+  #+begin_src python
+    cj = CookieJar()
+    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+    data = urllib.urlencode({"Action": "edit",
+                             "JudgeID": JUDGE_ID,
+                             "Password": PASSWORD
+                             })
+    response = opener.open(AUTH_URL, data)
+  #+end_src
+
+  Получаем сырой xhtml, но нужно указать правильную локаль,
+  чтобы получить задачи на русском языке.
+  #+name: get_data
+  #+begin_src python
+    opener = urllib2.build_opener()
+    opener.addheaders.append(('Cookie', 'Locale=Russian'))
+    fd = opener.open(TASKS_URL)
+  #+end_src
+
+  И затем скармливаем его lxml и получаем тело страницы
+  #+name: to_xml
+  #+begin_src python
+    doc = html.fromstring(fd.read())
+    body = doc.body
+  #+end_src
+
+  Каждая запись задачи хранится в элементе tr с классом /content/
+  #+name: get_content
+  #+begin_src python
+    tasks_list = body.find_class('content')
+  #+end_src
+
+  Мы будем хранить наши записи в дикте вида
+  {Номер: [статус(True|False), название(String), стоимость(Integer)]}
+  Среди прочих нам попадётся строчка таблицы заголовок, её нужно пропустить
+  #+name: create_dict
+  #+begin_src python
+    tasks_dict = {}
+    for task in tasks_list:
+        if task[0].tag == 'th':
+            continue
+        tasks_dict.update(fill_dict(task))
+  #+end_src
+
+  Заполнять задачи будем в следующем порядке:
+  1. Если в первом /td/ содержится изображение "ok.gif" -- задача выполнена
+  2. Второй /td/ содержит номер задачи
+  3. Третий /td/ содержит название задачи
+  4. Четвёртый и пятый /td/ мы пропускаем
+  5. Пятый /td/ содержит стоимость задания
+
+  #+name: fill_dict
+  #+begin_src python
+    def fill_dict(task):
+        status, num, name, _, _, price = task.getchildren()
+        if status.find('a'):
+            status = 'ok.gif' in status.find('a').find('img').attrib.get('src')
+        else:
+            status = False
+        return {num.text_content(): [status, name.text_content(), price.text_content()]}
+     #+end_src
+
+  Осталось записать результат в org-file
+  #+name: create_org
+  #+begin_src python
+    import logging
+
+    logging.basicConfig(filename='/tmp/logfile.txt', level=logging.DEBUG,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
+    for task in tasks_dict:
+        logging.debug(u'%s: %s' % (task, tasks_dict[task]))
+  #+end_src
