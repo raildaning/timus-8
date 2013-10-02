@@ -41,7 +41,7 @@
     import urllib2
     import logging
     from lxml import html
-    from cookielib import CookieJar
+    from cookielib import CookieJar, Cookie
 
     TASKS_URL = "http://acm.timus.ru/problemset.aspx?page=all"
     AUTH_URL = "http://acm.timus.ru/authedit.aspx"
@@ -81,15 +81,21 @@
 
     def fill_dict(task):
         status, num, name, _, _, price = task.getchildren()
-        if status.find('a'):
+        if status.find('a') is not None:
             status = 'ok.gif' in status.find('a').find('img').attrib.get('src')
         else:
             status = False
         return {num.text_content(): [status, name.text_content(), price.text_content()]}
 
     cj = CookieJar()
+    ck = Cookie(version=0, name='Locale', value='Russian', port=None,
+                          port_specified=False, domain='acm.timus.ru',
+                          domain_specified=False, domain_initial_dot=False, path='/',
+                          path_specified=True, secure=False, expires=None,
+                          discard=True, comment=None, comment_url=None,
+                          rest={'HttpOnly': None}, rfc2109=False)
+    cj.set_cookie(ck)
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-    opener.addheaders.append(('Cookie', 'Locale=Russian'))
     data = urllib.urlencode({"Action": "edit",
                              "JudgeID": JUDGE_ID,
                              "Password": PASSWORD})
@@ -147,9 +153,18 @@
         JUDGE_ID = "MYID"
         PASSWORD = "PASSWORD"
 
+Необходимо установить все Cookie: русскую локаль и добавить систему хранения
+куков авторизации  — CookieJar
+
     cj = CookieJar()
+    ck = Cookie(version=0, name='Locale', value='Russian', port=None,
+                          port_specified=False, domain='acm.timus.ru',
+                          domain_specified=False, domain_initial_dot=False, path='/',
+                          path_specified=True, secure=False, expires=None,
+                          discard=True, comment=None, comment_url=None,
+                          rest={'HttpOnly': None}, rfc2109=False)
+    cj.set_cookie(ck)
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-    opener.addheaders.append(('Cookie', 'Locale=Russian'))
     data = urllib.urlencode({"Action": "edit",
                              "JudgeID": JUDGE_ID,
                              "Password": PASSWORD})
@@ -191,7 +206,7 @@
 
     def fill_dict(task):
         status, num, name, _, _, price = task.getchildren()
-        if status.find('a'):
+        if status.find('a') is not None:
             status = 'ok.gif' in status.find('a').find('img').attrib.get('src')
         else:
             status = False

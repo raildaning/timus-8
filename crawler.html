@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>crawler</title>
-<!-- 2013-10-02 Ср. 00:15 -->
+<!-- 2013-10-02 Ср. 15:03 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="pimiento" />
@@ -196,7 +196,7 @@ for the JavaScript code in this tag.
 <span style="color: #00ffff; font-weight: bold;">import</span> urllib2
 <span style="color: #00ffff; font-weight: bold;">import</span> logging
 <span style="color: #00ffff; font-weight: bold;">from</span> lxml <span style="color: #00ffff; font-weight: bold;">import</span> html
-<span style="color: #00ffff; font-weight: bold;">from</span> cookielib <span style="color: #00ffff; font-weight: bold;">import</span> CookieJar
+<span style="color: #00ffff; font-weight: bold;">from</span> cookielib <span style="color: #00ffff; font-weight: bold;">import</span> CookieJar, Cookie
 
 <span style="color: #eedd82;">TASKS_URL</span> = <span style="color: #ffa07a;">"http://acm.timus.ru/problemset.aspx?page=all"</span>
 <span style="color: #eedd82;">AUTH_URL</span> = <span style="color: #ffa07a;">"http://acm.timus.ru/authedit.aspx"</span>
@@ -236,15 +236,21 @@ logging.basicConfig(filename=<span style="color: #ffa07a;">'/tmp/logfile.txt'</s
 
 <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">fill_dict</span>(task):
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status, num, name, <span style="color: #b0c4de;">_</span>, <span style="color: #b0c4de;">_</span>, price = task.getchildren()
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> status.find(<span style="color: #ffa07a;">'a'</span>):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> status.find(<span style="color: #ffa07a;">'a'</span>) <span style="color: #00ffff; font-weight: bold;">is</span> <span style="color: #00ffff; font-weight: bold;">not</span> <span style="color: #7fffd4;">None</span>:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status = <span style="color: #ffa07a;">'ok.gif'</span> <span style="color: #00ffff; font-weight: bold;">in</span> status.find(<span style="color: #ffa07a;">'a'</span>).find(<span style="color: #ffa07a;">'img'</span>).attrib.get(<span style="color: #ffa07a;">'src'</span>)
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">else</span>:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status = <span style="color: #00ffff; font-weight: bold;">False</span>
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> {num.text_content(): [status, name.text_content(), price.text_content<span style="color: #DC8CC3; background-color: #3F3F3F;">()]}</span>
 
 <span style="color: #eedd82;">cj</span> = CookieJar()
+<span style="color: #eedd82;">ck</span> = Cookie(version=0, name=<span style="color: #ffa07a;">'Locale'</span>, value=<span style="color: #ffa07a;">'Russian'</span>, port=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     port_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain=<span style="color: #ffa07a;">'acm.timus.ru'</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     domain_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain_initial_dot=<span style="color: #00ffff; font-weight: bold;">False</span>, path=<span style="color: #ffa07a;">'/'</span><span style="color: #DC8CC3; background-color: #3F3F3F;">,</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     path_specified=<span style="color: #00ffff; font-weight: bold;">True</span>, secure=<span style="color: #00ffff; font-weight: bold;">False</span>, expires=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     discard=<span style="color: #00ffff; font-weight: bold;">True</span>, comment=<span style="color: #7fffd4;">None</span>, comment_url=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     rest={<span style="color: #ffa07a;">'HttpOnly'</span>: <span style="color: #7fffd4;">None</span>}, rfc2109=<span style="color: #00ffff; font-weight: bold;">False</span>)
+cj.set_cookie(ck)
 <span style="color: #eedd82;">opener</span> = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span style="color: #ffa07a;">'Locale=Russian'</span>))
 <span style="color: #eedd82;">data</span> = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
@@ -313,11 +319,21 @@ opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span s
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   PASSWORD = <span style="color: #ffa07a;">"PASSWORD"</span>
 </pre>
 </div>
+<p>
+Необходимо установить все Cookie: русскую локаль и добавить систему хранения
+куков авторизации  — CookieJar
+</p>
 <div class="org-src-container">
 
 <pre class="src src-python" id="get_cookies"><span style="color: #eedd82;">cj</span> = CookieJar()
+<span style="color: #eedd82;">ck</span> = Cookie(version=0, name=<span style="color: #ffa07a;">'Locale'</span>, value=<span style="color: #ffa07a;">'Russian'</span>, port=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     port_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain=<span style="color: #ffa07a;">'acm.timus.ru'</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     domain_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain_initial_dot=<span style="color: #00ffff; font-weight: bold;">False</span>, path=<span style="color: #ffa07a;">'/'</span><span style="color: #DC8CC3; background-color: #3F3F3F;">,</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     path_specified=<span style="color: #00ffff; font-weight: bold;">True</span>, secure=<span style="color: #00ffff; font-weight: bold;">False</span>, expires=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     discard=<span style="color: #00ffff; font-weight: bold;">True</span>, comment=<span style="color: #7fffd4;">None</span>, comment_url=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     rest={<span style="color: #ffa07a;">'HttpOnly'</span>: <span style="color: #7fffd4;">None</span>}, rfc2109=<span style="color: #00ffff; font-weight: bold;">False</span>)
+cj.set_cookie(ck)
 <span style="color: #eedd82;">opener</span> = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span style="color: #ffa07a;">'Locale=Russian'</span>))
 <span style="color: #eedd82;">data</span> = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
@@ -387,7 +403,7 @@ opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span s
 
 <pre class="src src-python" id="fill_dict"><span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">fill_dict</span>(task):
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status, num, name, <span style="color: #b0c4de;">_</span>, <span style="color: #b0c4de;">_</span>, price = task.getchildren()
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> status.find(<span style="color: #ffa07a;">'a'</span>):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> status.find(<span style="color: #ffa07a;">'a'</span>) <span style="color: #00ffff; font-weight: bold;">is</span> <span style="color: #00ffff; font-weight: bold;">not</span> <span style="color: #7fffd4;">None</span>:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status = <span style="color: #ffa07a;">'ok.gif'</span> <span style="color: #00ffff; font-weight: bold;">in</span> status.find(<span style="color: #ffa07a;">'a'</span>).find(<span style="color: #ffa07a;">'img'</span>).attrib.get(<span style="color: #ffa07a;">'src'</span>)
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">else</span>:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status = <span style="color: #00ffff; font-weight: bold;">False</span>
@@ -409,7 +425,7 @@ opener.addheaders.append((<span style="color: #ffa07a;">'Cookie'</span>, <span s
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: pimiento</p>
-<p class="date">Created: 2013-10-02 Ср. 00:15</p>
+<p class="date">Created: 2013-10-02 Ср. 15:03</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 24.1.1 (<a href="http://orgmode.org">Org</a> mode 8.1.2)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
