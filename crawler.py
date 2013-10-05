@@ -44,13 +44,16 @@ except IOError, e:
     PASSWORD = "PASSWORD"
 
 
-def fill_dict(task):
+def get_task_line(task):
+    """
+    XMLElement -> [String, Bool, String, String]
+    """
     status, num, name, _, _, price = task.getchildren()
     if status.find('a') is not None:
         status = 'ok.gif' in status.find('a').find('img').attrib.get('src')
     else:
         status = False
-    return {num.text_content(): [status, name.text_content(), price.text_content()]}
+    return [task.text_content(), status, name.text_content(), price.text_content()]
 
 cj = CookieJar()
 ck = Cookie(version=0, name='Locale', value='Russian', port=None,
@@ -70,13 +73,16 @@ fd = opener.open(TASKS_URL)
 
 doc = html.fromstring(fd.read())
 
-tasks_list = doc.body.find_class('content')
+raw_tasks_list = doc.body.find_class('content')
 
-tasks_dict = {}
-for task in tasks_list:
+tasks_list = []
+for task in raw_tasks_list:
     if task[0].tag == 'th':
         continue
-    tasks_dict.update(fill_dict(task))
+    tasks_list + get_task_line(task)
 
-for task in tasks_dict:
-    logging.debug(u'%s: %s' % (task, tasks_dict[task]))
+def create_org(num, status, name, price):
+    print(num, status, name, price)
+
+for task in tasks_list:
+    create_org(*task)

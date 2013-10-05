@@ -38,15 +38,19 @@
     from lxml import html
     from cookielib import CookieJar, Cookie
 
-    TASKS_URL = "http://acm.timus.ru/problemset.aspx?page=all"
-    AUTH_URL = "http://acm.timus.ru/authedit.aspx"
+    TIMUS_URL = "http://acm.timus.ru/"
+    TASKS_URL = TIMUS_URL + "problemset.aspx?page=all"
+    AUTH_URL = TIMUS_URL + "authedit.aspx"
+    PROBLEM_URL = TIMUS_URL + "problem.aspx"
     CONFIG_PATH = "./crawler.conf"
 
     <<logging>>
 
+    <<objects>>
+
     <<get_secrets>>
 
-    <<fill_dict>>
+    <<get_task_line>>
 
     <<get_cookies>>
 
@@ -56,7 +60,7 @@
 
     <<get_content>>
 
-    <<create_dict>>
+    <<create_tasks_list>>
 
     <<create_org>>
   #+end_src
@@ -106,25 +110,27 @@
   куков авторизации  — CookieJar
   #+name: get_cookies
   #+begin_src python
-    cj = CookieJar()
-    ck = Cookie(version=0, name='Locale', value='Russian', port=None,
-                          port_specified=False, domain='acm.timus.ru',
-                          domain_specified=False, domain_initial_dot=False, path='/',
-                          path_specified=True, secure=False, expires=None,
-                          discard=True, comment=None, comment_url=None,
-                          rest={'HttpOnly': None}, rfc2109=False)
-    cj.set_cookie(ck)
-    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-    data = urllib.urlencode({"Action": "edit",
-                             "JudgeID": JUDGE_ID,
-                             "Password": PASSWORD})
-    response = opener.open(AUTH_URL, data)
+    def get_opener():
+        cj = CookieJar()
+        ck = Cookie(version=0, name='Locale', value='Russian', port=None,
+                    port_specified=False, domain='acm.timus.ru',
+                    domain_specified=False, domain_initial_dot=False, path='/',
+                    path_specified=True, secure=False, expires=None,
+                    discard=True, comment=None, comment_url=None,
+                    rest={'HttpOnly': None}, rfc2109=False)
+        cj.set_cookie(ck)
+        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        data = urllib.urlencode({"Action": "edit",
+                                 "JudgeID": JUDGE_ID,
+                                 "Password": PASSWORD})
+        response = opener.open(AUTH_URL, data)
+        return opener
   #+end_src
 
   Получаем сырой xhtml
   #+name: get_data
   #+begin_src python
-    fd = opener.open(TASKS_URL)
+    fd = get_opener().open(TASKS_URL)
   #+end_src
 
   И затем скармливаем его lxml и получаем тело страницы
@@ -136,19 +142,19 @@
   Каждая запись задачи хранится в элементе tr с классом /content/
   #+name: get_content
   #+begin_src python
-    tasks_list = doc.body.find_class('content')
+    raw_tasks_list = doc.body.find_class('content')
   #+end_src
 
-  Мы будем хранить наши записи в дикте вида
-  {Номер: [статус(True|False), название(String), стоимость(Integer)]}
+  Мы будем хранить наши записи в списке вида
+  [Номер(Integer), статус(True|False), название(String), стоимость(Integer)]
   Среди прочих нам попадётся строчка таблицы заголовок, её нужно пропустить
-  #+name: create_dict
+  #+name: create_tasks_list
   #+begin_src python
-    tasks_dict = {}
-    for task in tasks_list:
+    tasks_list = []
+    for task in raw_tasks_list:
         if task[0].tag == 'th':
             continue
-        tasks_dict.update(fill_dict(task))
+        tasks_list + get_task_line(task)
   #+end_src
 
   Заполнять задачи будем в следующем порядке:
@@ -158,20 +164,57 @@
   4. Четвёртый и пятый /td/ мы пропускаем
   5. Пятый /td/ содержит стоимость задания
 
-  #+name: fill_dict
+  #+name: get_task_line
   #+begin_src python
-    def fill_dict(task):
+    def get_task_line(task):
+        """
+        XMLElement -> [String, Bool, String, String]
+        """
         status, num, name, _, _, price = task.getchildren()
         if status.find('a') is not None:
             status = 'ok.gif' in status.find('a').find('img').attrib.get('src')
         else:
             status = False
-        return {num.text_content(): [status, name.text_content(), price.text_content()]}
+        return [task.text_content(), status, name.text_content(), price.text_content()]
      #+end_src
 
   Осталось записать результат в org-file
   #+name: create_org
   #+begin_src python
-    for task in tasks_dict:
-        logging.debug(u'%s: %s' % (task, tasks_dict[task]))
+    def create_task(num, status, name, price):
+        task = Task(num, status, name, price)
+        document.add_task(task)
+
+    for task in tasks_list:
+        create_task(*task)
+  #+end_src
+
+  Для хранения всего документа создадим класс документа
+  и классы записей задач
+  #+name: objects
+  #+begin_src python
+    class OrgDocument(object):
+
+        tasks_list = {}
+
+        def add_task(task):
+            tasks_list[task.num] = [task]
+
+    document = OrgDocument()
+
+    class Task(object):
+
+        def __init__(self, num, status, name, price):
+            self.num = int(num)
+            self.status = status
+            self.name = name
+            self.price = price
+
+        @property
+        def url(self):
+            return PROBLEM_URL + "?num=%d" % self.num
+
+
+        def get_content(self):
+            pass
   #+end_src
