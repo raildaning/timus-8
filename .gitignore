@@ -6,6 +6,7 @@
 *.py[cod]
 
 # C extensions
+*.o
 *.so
 
 # Packages
