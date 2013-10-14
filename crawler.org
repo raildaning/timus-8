@@ -43,6 +43,10 @@
     AUTH_URL = TIMUS_URL + "authedit.aspx"
     PROBLEM_URL = TIMUS_URL + "problem.aspx"
     CONFIG_PATH = "./crawler.conf"
+    OPENER = None
+
+    with open('./template.org', 'r') as template_file:
+        template = template_file.read()
 
     <<logging>>
 
@@ -111,6 +115,9 @@
   #+name: get_cookies
   #+begin_src python
     def get_opener():
+        global OPENER
+        if OPENER:
+            return OPENER
         cj = CookieJar()
         ck = Cookie(version=0, name='Locale', value='Russian', port=None,
                     port_specified=False, domain='acm.timus.ru',
@@ -124,6 +131,7 @@
                                  "JudgeID": JUDGE_ID,
                                  "Password": PASSWORD})
         response = opener.open(AUTH_URL, data)
+        OPENER = opener
         return opener
   #+end_src
 
@@ -154,7 +162,7 @@
     for task in raw_tasks_list:
         if task[0].tag == 'th':
             continue
-        tasks_list + get_task_line(task)
+        tasks_list += [get_task_line(task)]
   #+end_src
 
   Заполнять задачи будем в следующем порядке:
@@ -175,32 +183,28 @@
             status = 'ok.gif' in status.find('a').find('img').attrib.get('src')
         else:
             status = False
-        return [task.text_content(), status, name.text_content(), price.text_content()]
+        return [num.text_content(), status, name.text_content(), price.text_content()]
      #+end_src
 
   Осталось записать результат в org-file
   #+name: create_org
   #+begin_src python
     def create_task(num, status, name, price):
-        task = Task(num, status, name, price)
-        document.add_task(task)
+        document[num] = Task(num, status, name, price)
 
     for task in tasks_list:
         create_task(*task)
+
+    for task in sorted(document, key=lambda x: int(document[x].price)):
+        template += "\n"
+        template += document[task].get_task()
+
   #+end_src
 
-  Для хранения всего документа создадим класс документа
-  и классы записей задач
+  Для хранения всего документа создадим класс записей задач
   #+name: objects
   #+begin_src python
-    class OrgDocument(object):
-
-        tasks_list = {}
-
-        def add_task(task):
-            tasks_list[task.num] = [task]
-
-    document = OrgDocument()
+    document = {}
 
     class Task(object):
 
@@ -214,7 +218,51 @@
         def url(self):
             return PROBLEM_URL + "?num=%d" % self.num
 
+        def __str__(self):
+            return u"{num} {status} {name} {price}".format(
+                num=self.num, status=self.status, name=self.name,
+                price=self.price)
 
-        def get_content(self):
-            pass
+        <<get_task>>
+
+        <<get_problem>>
+  #+end_src
+
+  Функция, возвращающая для каждой задачи запись в org-файл
+  #+name: get_task
+  #+begin_src python
+    def get_task(self):
+        return u"""* {status} {name:<40}:{price}:
+        {problem}
+        {curl_query}""".format(status=self.status, name=self.name, price=self.price,
+                               problem=self.get_problem(), curl_query="{curl-query}")
+  #+end_src
+
+  Получаем описание задачи с сайта
+  #+name: get_problem
+  #+begin_src python
+    def table_to_org(self, table):
+        return table.text_content()
+
+    def get_problem(self):
+        opener = get_opener()
+        doc = html.fromstring(opener.open(self.url).read())
+        problem_text = u""
+        try:
+            problem_body = doc.xpath("//div[contains(@id,'problem_text')]")[0]
+        except IndexError:
+            logging.debug('Problem no. {num} has no problem text'.format(num=self.num))
+        else:
+            for element in problem_body:
+                if element.tag == "div":
+                    problem_text += u"{text}\n".format(
+                        text=element.text_content())
+                elif element.tag == "h3":
+                    problem_text += u"** {text}\n".format(
+                        text=element.text_content())
+                elif element.tag == "table":
+                    problem_text += u"{text}\n".format(
+                        text=self.table_to_org(element))
+        finally:
+            return problem_text
   #+end_src

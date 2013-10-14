@@ -1,0 +1,10 @@
+#+TITLE:      Timus tasks
+#+AUTHOR:     your_name
+#+EMAIL:      your_mail
+#+DESCRIPTION: Timus tasks list with descriptions and links for solutions
+#+KEYWORDS: timus,challenges
+#+LANGUAGE: ru
+#+OPTIONS: H:3 num:t toc:t \n:nil @:t ::t |:t ^:{} _:{} -:t f:t *:t <:t
+#+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+STYLE: <link rel="stylesheet" type="text/css" href="http://orgmode.org/worg/style/worg-classic.css" />
