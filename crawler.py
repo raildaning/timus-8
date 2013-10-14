@@ -41,10 +41,10 @@ class Task(object):
             price=self.price)
 
     def get_task(self):
-        return u"""* {status} {name:<40}:{price}:
-        {problem}
-        {curl_query}""".format(status=self.status, name=self.name, price=self.price,
-                               problem=self.get_problem(), curl_query="{curl-query}")
+        return u"""* {status} {name:<40}:{price}:\n{problem}\n{curl_query}""".format(
+            status=self.status and u"DONE" or u"TODO", name=self.name,
+            price=self.price, problem=self.get_problem(),
+            curl_query=u"{curl-query}")
 
     def table_to_org(self, table):
         return table.text_content()
@@ -60,6 +60,8 @@ class Task(object):
         else:
             for element in problem_body:
                 if element.tag == "div":
+                    if 'problem_source' in element:
+                        continue
                     problem_text += u"{text}\n".format(
                         text=element.text_content())
                 elif element.tag == "h3":
