@@ -43,12 +43,70 @@
     from lxml import html
     from cookielib import CookieJar, Cookie
 
-    TASKS_URL = "http://acm.timus.ru/problemset.aspx?page=all"
-    AUTH_URL = "http://acm.timus.ru/authedit.aspx"
+    TIMUS_URL = "http://acm.timus.ru/"
+    TASKS_URL = TIMUS_URL + "problemset.aspx?page=all"
+    AUTH_URL = TIMUS_URL + "authedit.aspx"
+    PROBLEM_URL = TIMUS_URL + "problem.aspx"
     CONFIG_PATH = "./crawler.conf"
+    OPENER = None
+
+    with open('./template.org', 'r') as template_file:
+        template = template_file.read()
 
     logging.basicConfig(filename='/tmp/logfile.txt', level=logging.DEBUG,
                         format='%(asctime)s - %(levelname)s - %(message)s')
+
+    document = {}
+
+    class Task(object):
+
+        def __init__(self, num, status, name, price):
+            self.num = int(num)
+            self.status = status
+            self.name = name
+            self.price = price
+
+        @property
+        def url(self):
+            return PROBLEM_URL + "?num=%d" % self.num
+
+        def __str__(self):
+            return u"{num} {status} {name} {price}".format(
+                num=self.num, status=self.status, name=self.name,
+                price=self.price)
+
+        def get_task(self):
+            return u"""* {status} {name:<40}:{price}:\n{problem}\n{curl_query}""".format(
+                status=self.status and u"DONE" or u"TODO", name=self.name,
+                price=self.price, problem=self.get_problem(),
+                curl_query=u"{curl-query}")
+
+        def table_to_org(self, table):
+            return table.text_content()
+
+        def get_problem(self):
+            opener = get_opener()
+            doc = html.fromstring(opener.open(self.url).read())
+            problem_text = u""
+            try:
+                problem_body = doc.xpath("//div[contains(@id,'problem_text')]")[0]
+            except IndexError:
+                logging.debug('Problem no. {num} has no problem text'.format(num=self.num))
+            else:
+                for element in problem_body:
+                    if element.tag == "div":
+                        if 'problem_source' in element:
+                            continue
+                        problem_text += u"{text}\n".format(
+                            text=element.text_content())
+                    elif element.tag == "h3":
+                        problem_text += u"** {text}\n".format(
+                            text=element.text_content())
+                    elif element.tag == "table":
+                        problem_text += u"{text}\n".format(
+                            text=self.table_to_org(element))
+            finally:
+                return problem_text
 
     def get_secrets():
         if os.path.isfile(CONFIG_PATH):
@@ -79,42 +137,58 @@
         PASSWORD = "PASSWORD"
 
 
-    def fill_dict(task):
+    def get_task_line(task):
+        """
+        XMLElement -> [String, Bool, String, String]
+        """
         status, num, name, _, _, price = task.getchildren()
         if status.find('a') is not None:
             status = 'ok.gif' in status.find('a').find('img').attrib.get('src')
         else:
             status = False
-        return {num.text_content(): [status, name.text_content(), price.text_content()]}
+        return [num.text_content(), status, name.text_content(), price.text_content()]
 
-    cj = CookieJar()
-    ck = Cookie(version=0, name='Locale', value='Russian', port=None,
-                          port_specified=False, domain='acm.timus.ru',
-                          domain_specified=False, domain_initial_dot=False, path='/',
-                          path_specified=True, secure=False, expires=None,
-                          discard=True, comment=None, comment_url=None,
-                          rest={'HttpOnly': None}, rfc2109=False)
-    cj.set_cookie(ck)
-    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-    data = urllib.urlencode({"Action": "edit",
-                             "JudgeID": JUDGE_ID,
-                             "Password": PASSWORD})
-    response = opener.open(AUTH_URL, data)
+    def get_opener():
+        global OPENER
+        if OPENER:
+            return OPENER
+        cj = CookieJar()
+        ck = Cookie(version=0, name='Locale', value='Russian', port=None,
+                    port_specified=False, domain='acm.timus.ru',
+                    domain_specified=False, domain_initial_dot=False, path='/',
+                    path_specified=True, secure=False, expires=None,
+                    discard=True, comment=None, comment_url=None,
+                    rest={'HttpOnly': None}, rfc2109=False)
+        cj.set_cookie(ck)
+        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        data = urllib.urlencode({"Action": "edit",
+                                 "JudgeID": JUDGE_ID,
+                                 "Password": PASSWORD})
+        response = opener.open(AUTH_URL, data)
+        OPENER = opener
+        return opener
 
-    fd = opener.open(TASKS_URL)
+    fd = get_opener().open(TASKS_URL)
 
     doc = html.fromstring(fd.read())
 
-    tasks_list = doc.body.find_class('content')
+    raw_tasks_list = doc.body.find_class('content')
 
-    tasks_dict = {}
-    for task in tasks_list:
+    tasks_list = []
+    for task in raw_tasks_list:
         if task[0].tag == 'th':
             continue
-        tasks_dict.update(fill_dict(task))
+        tasks_list += [get_task_line(task)]
 
-    for task in tasks_dict:
-        logging.debug(u'%s: %s' % (task, tasks_dict[task]))
+    def create_task(num, status, name, price):
+        document[num] = Task(num, status, name, price)
+
+    for task in tasks_list:
+        create_task(*task)
+
+    for task in sorted(document, key=lambda x: int(document[x].price)):
+        template += "\n"
+        template += document[task].get_task()
 
 Подготовим возможность логгировать ход выполения нашего скрипта
 
@@ -156,23 +230,29 @@
 Необходимо установить все Cookie: русскую локаль и добавить систему хранения
 куков авторизации  — CookieJar
 
-    cj = CookieJar()
-    ck = Cookie(version=0, name='Locale', value='Russian', port=None,
-                          port_specified=False, domain='acm.timus.ru',
-                          domain_specified=False, domain_initial_dot=False, path='/',
-                          path_specified=True, secure=False, expires=None,
-                          discard=True, comment=None, comment_url=None,
-                          rest={'HttpOnly': None}, rfc2109=False)
-    cj.set_cookie(ck)
-    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-    data = urllib.urlencode({"Action": "edit",
-                             "JudgeID": JUDGE_ID,
-                             "Password": PASSWORD})
-    response = opener.open(AUTH_URL, data)
+    def get_opener():
+        global OPENER
+        if OPENER:
+            return OPENER
+        cj = CookieJar()
+        ck = Cookie(version=0, name='Locale', value='Russian', port=None,
+                    port_specified=False, domain='acm.timus.ru',
+                    domain_specified=False, domain_initial_dot=False, path='/',
+                    path_specified=True, secure=False, expires=None,
+                    discard=True, comment=None, comment_url=None,
+                    rest={'HttpOnly': None}, rfc2109=False)
+        cj.set_cookie(ck)
+        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        data = urllib.urlencode({"Action": "edit",
+                                 "JudgeID": JUDGE_ID,
+                                 "Password": PASSWORD})
+        response = opener.open(AUTH_URL, data)
+        OPENER = opener
+        return opener
 
 Получаем сырой xhtml
 
-    fd = opener.open(TASKS_URL)
+    fd = get_opener().open(TASKS_URL)
 
 И затем скармливаем его lxml и получаем тело страницы
 
@@ -180,17 +260,17 @@
 
 Каждая запись задачи хранится в элементе tr с классом *content*
 
-    tasks_list = doc.body.find_class('content')
+    raw_tasks_list = doc.body.find_class('content')
 
-Мы будем хранить наши записи в дикте вида
-{Номер: [статус(True|False), название(String), стоимость(Integer)]}
+Мы будем хранить наши записи в списке вида
+[Номер(Integer), статус(True|False), название(String), стоимость(Integer)]
 Среди прочих нам попадётся строчка таблицы заголовок, её нужно пропустить
 
-    tasks_dict = {}
-    for task in tasks_list:
+    tasks_list = []
+    for task in raw_tasks_list:
         if task[0].tag == 'th':
             continue
-        tasks_dict.update(fill_dict(task))
+        tasks_list += [get_task_line(task)]
 
 Заполнять задачи будем в следующем порядке:
 
@@ -204,15 +284,87 @@
 
 5.  Пятый *td* содержит стоимость задания
 
-    def fill_dict(task):
+    def get_task_line(task):
+        """
+        XMLElement -> [String, Bool, String, String]
+        """
         status, num, name, _, _, price = task.getchildren()
         if status.find('a') is not None:
             status = 'ok.gif' in status.find('a').find('img').attrib.get('src')
         else:
             status = False
-        return {num.text_content(): [status, name.text_content(), price.text_content()]}
+        return [num.text_content(), status, name.text_content(), price.text_content()]
 
 Осталось записать результат в org-file
 
-    for task in tasks_dict:
-        logging.debug(u'%s: %s' % (task, tasks_dict[task]))
+    def create_task(num, status, name, price):
+        document[num] = Task(num, status, name, price)
+
+    for task in tasks_list:
+        create_task(*task)
+
+    for task in sorted(document, key=lambda x: int(document[x].price)):
+        template += "\n"
+        template += document[task].get_task()
+
+Для хранения всего документа создадим класс записей задач
+
+    document = {}
+
+    class Task(object):
+
+        def __init__(self, num, status, name, price):
+            self.num = int(num)
+            self.status = status
+            self.name = name
+            self.price = price
+
+        @property
+        def url(self):
+            return PROBLEM_URL + "?num=%d" % self.num
+
+        def __str__(self):
+            return u"{num} {status} {name} {price}".format(
+                num=self.num, status=self.status, name=self.name,
+                price=self.price)
+
+        <<get_task>>
+
+        <<get_problem>>
+
+Функция, возвращающая для каждой задачи запись в org-файл
+
+    def get_task(self):
+        return u"""* {status} {name:<40}:{price}:\n{problem}\n{curl_query}""".format(
+            status=self.status and u"DONE" or u"TODO", name=self.name,
+            price=self.price, problem=self.get_problem(),
+            curl_query=u"{curl-query}")
+
+Получаем описание задачи с сайта
+
+    def table_to_org(self, table):
+        return table.text_content()
+
+    def get_problem(self):
+        opener = get_opener()
+        doc = html.fromstring(opener.open(self.url).read())
+        problem_text = u""
+        try:
+            problem_body = doc.xpath("//div[contains(@id,'problem_text')]")[0]
+        except IndexError:
+            logging.debug('Problem no. {num} has no problem text'.format(num=self.num))
+        else:
+            for element in problem_body:
+                if element.tag == "div":
+                    if 'problem_source' in element:
+                        continue
+                    problem_text += u"{text}\n".format(
+                        text=element.text_content())
+                elif element.tag == "h3":
+                    problem_text += u"** {text}\n".format(
+                        text=element.text_content())
+                elif element.tag == "table":
+                    problem_text += u"{text}\n".format(
+                        text=self.table_to_org(element))
+        finally:
+            return problem_text

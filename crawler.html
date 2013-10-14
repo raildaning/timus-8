@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>crawler</title>
-<!-- 2013-10-02 Ср. 15:03 -->
+<!-- 2013-10-14 Пн. 17:13 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="pimiento" />
@@ -198,12 +198,70 @@ for the JavaScript code in this tag.
 <span style="color: #00ffff; font-weight: bold;">from</span> lxml <span style="color: #00ffff; font-weight: bold;">import</span> html
 <span style="color: #00ffff; font-weight: bold;">from</span> cookielib <span style="color: #00ffff; font-weight: bold;">import</span> CookieJar, Cookie
 
-<span style="color: #eedd82;">TASKS_URL</span> = <span style="color: #ffa07a;">"http://acm.timus.ru/problemset.aspx?page=all"</span>
-<span style="color: #eedd82;">AUTH_URL</span> = <span style="color: #ffa07a;">"http://acm.timus.ru/authedit.aspx"</span>
+<span style="color: #eedd82;">TIMUS_URL</span> = <span style="color: #ffa07a;">"http://acm.timus.ru/"</span>
+<span style="color: #eedd82;">TASKS_URL</span> = TIMUS_URL + <span style="color: #ffa07a;">"problemset.aspx?page=all"</span>
+<span style="color: #eedd82;">AUTH_URL</span> = TIMUS_URL + <span style="color: #ffa07a;">"authedit.aspx"</span>
+<span style="color: #eedd82;">PROBLEM_URL</span> = TIMUS_URL + <span style="color: #ffa07a;">"problem.aspx"</span>
 <span style="color: #eedd82;">CONFIG_PATH</span> = <span style="color: #ffa07a;">"./crawler.conf"</span>
+<span style="color: #eedd82;">OPENER</span> = <span style="color: #7fffd4;">None</span>
+
+<span style="color: #00ffff; font-weight: bold;">with</span> <span style="color: #b0c4de;">open</span>(<span style="color: #ffa07a;">'./template.org'</span>, <span style="color: #ffa07a;">'r'</span>) <span style="color: #00ffff; font-weight: bold;">as</span> template_file:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   template = template_file.read()
 
 logging.basicConfig(filename=<span style="color: #ffa07a;">'/tmp/logfile.txt'</span>, level=logging.DEBUG,
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #b0c4de;">format</span>=<span style="color: #ffa07a;">'%(asctime)s - %(levelname)s - %(message)s'</span>)
+
+<span style="color: #eedd82;">document</span> = {}
+
+<span style="color: #00ffff; font-weight: bold;">class</span> <span style="color: #98fb98;">Task</span>(<span style="color: #b0c4de;">object</span>):
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">__init__</span>(<span style="color: #00ffff; font-weight: bold;">self</span>, num, status, name, price):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">self</span>.num = <span style="color: #b0c4de;">int</span>(num)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">self</span>.status = status
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">self</span>.name = name
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">self</span>.price = price
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #98fb98;">@property</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">url</span>(<span style="color: #00ffff; font-weight: bold;">self</span>):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> PROBLEM_URL + <span style="color: #ffa07a;">"?num=%d"</span> % <span style="color: #00ffff; font-weight: bold;">self</span>.num
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">__str__</span>(<span style="color: #00ffff; font-weight: bold;">self</span>):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> u<span style="color: #ffa07a;">"{num} {status} {name} {price}"</span>.format(
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   num=<span style="color: #00ffff; font-weight: bold;">self</span>.num, status=<span style="color: #00ffff; font-weight: bold;">self</span>.status, name=<span style="color: #00ffff; font-weight: bold;">self</span>.name,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   price=<span style="color: #00ffff; font-weight: bold;">self</span>.price)
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_task</span>(<span style="color: #00ffff; font-weight: bold;">self</span>):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> <span style="color: #ffa07a;">u"""* {status} {name:&lt;40}:{price}:\n{problem}\n{curl_query}"""</span>.fo<span style="color: #DC8CC3; background-color: #3F3F3F;">rmat(</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status=<span style="color: #00ffff; font-weight: bold;">self</span>.status <span style="color: #00ffff; font-weight: bold;">and</span> u<span style="color: #ffa07a;">"DONE"</span> <span style="color: #00ffff; font-weight: bold;">or</span> u<span style="color: #ffa07a;">"TODO"</span>, name=<span style="color: #00ffff; font-weight: bold;">self</span>.name,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   price=<span style="color: #00ffff; font-weight: bold;">self</span>.price, problem=<span style="color: #00ffff; font-weight: bold;">self</span>.get_problem(),
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   curl_query=u<span style="color: #ffa07a;">"{curl-query}"</span>)
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">table_to_org</span>(<span style="color: #00ffff; font-weight: bold;">self</span>, table):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> table.text_content()
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_problem</span>(<span style="color: #00ffff; font-weight: bold;">self</span>):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   opener = get_opener()
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   doc = html.fromstring(opener.open(<span style="color: #00ffff; font-weight: bold;">self</span>.url).read())
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   problem_text = u<span style="color: #ffa07a;">""</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">try</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   problem_body = doc.xpath(<span style="color: #ffa07a;">"//div[contains(@id,'problem_text')]"</span>)[0]
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">except</span> <span style="color: #98fb98;">IndexError</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   logging.debug(<span style="color: #ffa07a;">'Problem no. {num} has no problem text'</span>.format(num=<span style="color: #00ffff; font-weight: bold;">sel</span><span style="color: #DC8CC3; background-color: #3F3F3F;">f.num))</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">else</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">for</span> element <span style="color: #00ffff; font-weight: bold;">in</span> problem_body:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> element.tag == <span style="color: #ffa07a;">"div"</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> <span style="color: #ffa07a;">'problem_source'</span> <span style="color: #00ffff; font-weight: bold;">in</span> element:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">continue</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   problem_text += u<span style="color: #ffa07a;">"{text}\n"</span>.format(
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   text=element.text_content())
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">elif</span> element.tag == <span style="color: #ffa07a;">"h3"</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   problem_text += u<span style="color: #ffa07a;">"** {text}\n"</span>.format(
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   text=element.text_content())
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">elif</span> element.tag == <span style="color: #ffa07a;">"table"</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   problem_text += u<span style="color: #ffa07a;">"{text}\n"</span>.format(
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   text=<span style="color: #00ffff; font-weight: bold;">self</span>.table_to_org(element))
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">finally</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> problem_text
 
 <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_secrets</span>():
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> os.path.isfile(CONFIG_PATH):
@@ -234,42 +292,58 @@ logging.basicConfig(filename=<span style="color: #ffa07a;">'/tmp/logfile.txt'</s
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   PASSWORD = <span style="color: #ffa07a;">"PASSWORD"</span>
 
 
-<span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">fill_dict</span>(task):
+<span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_task_line</span>(task):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #ffa07a;">"""</span>
+<span style="color: #ffa07a;">    XMLElement -&gt; [String, Bool, String, String]</span>
+<span style="color: #ffa07a;">    """</span>
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status, num, name, <span style="color: #b0c4de;">_</span>, <span style="color: #b0c4de;">_</span>, price = task.getchildren()
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> status.find(<span style="color: #ffa07a;">'a'</span>) <span style="color: #00ffff; font-weight: bold;">is</span> <span style="color: #00ffff; font-weight: bold;">not</span> <span style="color: #7fffd4;">None</span>:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status = <span style="color: #ffa07a;">'ok.gif'</span> <span style="color: #00ffff; font-weight: bold;">in</span> status.find(<span style="color: #ffa07a;">'a'</span>).find(<span style="color: #ffa07a;">'img'</span>).attrib.get(<span style="color: #ffa07a;">'src'</span>)
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">else</span>:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status = <span style="color: #00ffff; font-weight: bold;">False</span>
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> {num.text_content(): [status, name.text_content(), price.text_content<span style="color: #DC8CC3; background-color: #3F3F3F;">()]}</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> [num.text_content(), status, name.text_content(), price.text_content(<span style="color: #DC8CC3; background-color: #3F3F3F;">)]</span>
 
-<span style="color: #eedd82;">cj</span> = CookieJar()
-<span style="color: #eedd82;">ck</span> = Cookie(version=0, name=<span style="color: #ffa07a;">'Locale'</span>, value=<span style="color: #ffa07a;">'Russian'</span>, port=<span style="color: #7fffd4;">None</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     port_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain=<span style="color: #ffa07a;">'acm.timus.ru'</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     domain_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain_initial_dot=<span style="color: #00ffff; font-weight: bold;">False</span>, path=<span style="color: #ffa07a;">'/'</span><span style="color: #DC8CC3; background-color: #3F3F3F;">,</span>
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     path_specified=<span style="color: #00ffff; font-weight: bold;">True</span>, secure=<span style="color: #00ffff; font-weight: bold;">False</span>, expires=<span style="color: #7fffd4;">None</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     discard=<span style="color: #00ffff; font-weight: bold;">True</span>, comment=<span style="color: #7fffd4;">None</span>, comment_url=<span style="color: #7fffd4;">None</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     rest={<span style="color: #ffa07a;">'HttpOnly'</span>: <span style="color: #7fffd4;">None</span>}, rfc2109=<span style="color: #00ffff; font-weight: bold;">False</span>)
-cj.set_cookie(ck)
-<span style="color: #eedd82;">opener</span> = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-<span style="color: #eedd82;">data</span> = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
-<span style="color: #eedd82;">response</span> = opener.open(AUTH_URL, data)
+<span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_opener</span>():
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">global</span> OPENER
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> OPENER:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> OPENER
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   cj = CookieJar()
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   ck = Cookie(version=0, name=<span style="color: #ffa07a;">'Locale'</span>, value=<span style="color: #ffa07a;">'Russian'</span>, port=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   port_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain=<span style="color: #ffa07a;">'acm.timus.ru'</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   domain_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain_initial_dot=<span style="color: #00ffff; font-weight: bold;">False</span>, path=<span style="color: #ffa07a;">'/'</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   path_specified=<span style="color: #00ffff; font-weight: bold;">True</span>, secure=<span style="color: #00ffff; font-weight: bold;">False</span>, expires=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   discard=<span style="color: #00ffff; font-weight: bold;">True</span>, comment=<span style="color: #7fffd4;">None</span>, comment_url=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   rest={<span style="color: #ffa07a;">'HttpOnly'</span>: <span style="color: #7fffd4;">None</span>}, rfc2109=<span style="color: #00ffff; font-weight: bold;">False</span>)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   cj.set_cookie(ck)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   data = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   response = opener.open(AUTH_URL, data)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   OPENER = opener
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> opener
 
-<span style="color: #eedd82;">fd</span> = opener.open(TASKS_URL)
+<span style="color: #eedd82;">fd</span> = get_opener().open(TASKS_URL)
 
 <span style="color: #eedd82;">doc</span> = html.fromstring(fd.read())
 
-<span style="color: #eedd82;">tasks_list</span> = doc.body.find_class(<span style="color: #ffa07a;">'content'</span>)
+<span style="color: #eedd82;">raw_tasks_list</span> = doc.body.find_class(<span style="color: #ffa07a;">'content'</span>)
 
-<span style="color: #eedd82;">tasks_dict</span> = {}
-<span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> tasks_list:
+<span style="color: #eedd82;">tasks_list</span> = []
+<span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> raw_tasks_list:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> task[0].tag == <span style="color: #ffa07a;">'th'</span>:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">continue</span>
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   tasks_dict.update(fill_dict(task))
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   tasks_list += [get_task_line(task)]
 
-<span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> tasks_dict:
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   logging.debug(u<span style="color: #ffa07a;">'%s: %s'</span> % (task, tasks_dict[task]))
+<span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">create_task</span>(num, status, name, price):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   document[num] = Task(num, status, name, price)
+
+<span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> tasks_list:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   create_task(*task)
+
+<span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> <span style="color: #b0c4de;">sorted</span>(document, key=<span style="color: #00ffff; font-weight: bold;">lambda</span> x: <span style="color: #b0c4de;">int</span>(document[x].price)):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   template += <span style="color: #ffa07a;">"\n"</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   template += document[task].get_task()
 </pre>
 </div>
 
@@ -325,19 +399,25 @@ cj.set_cookie(ck)
 </p>
 <div class="org-src-container">
 
-<pre class="src src-python" id="get_cookies"><span style="color: #eedd82;">cj</span> = CookieJar()
-<span style="color: #eedd82;">ck</span> = Cookie(version=0, name=<span style="color: #ffa07a;">'Locale'</span>, value=<span style="color: #ffa07a;">'Russian'</span>, port=<span style="color: #7fffd4;">None</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     port_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain=<span style="color: #ffa07a;">'acm.timus.ru'</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     domain_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain_initial_dot=<span style="color: #00ffff; font-weight: bold;">False</span>, path=<span style="color: #ffa07a;">'/'</span><span style="color: #DC8CC3; background-color: #3F3F3F;">,</span>
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     path_specified=<span style="color: #00ffff; font-weight: bold;">True</span>, secure=<span style="color: #00ffff; font-weight: bold;">False</span>, expires=<span style="color: #7fffd4;">None</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     discard=<span style="color: #00ffff; font-weight: bold;">True</span>, comment=<span style="color: #7fffd4;">None</span>, comment_url=<span style="color: #7fffd4;">None</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>     rest={<span style="color: #ffa07a;">'HttpOnly'</span>: <span style="color: #7fffd4;">None</span>}, rfc2109=<span style="color: #00ffff; font-weight: bold;">False</span>)
-cj.set_cookie(ck)
-<span style="color: #eedd82;">opener</span> = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-<span style="color: #eedd82;">data</span> = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
-<span style="color: #eedd82;">response</span> = opener.open(AUTH_URL, data)
+<pre class="src src-python" id="get_cookies"><span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_opener</span>():
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">global</span> OPENER
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> OPENER:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> OPENER
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   cj = CookieJar()
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   ck = Cookie(version=0, name=<span style="color: #ffa07a;">'Locale'</span>, value=<span style="color: #ffa07a;">'Russian'</span>, port=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   port_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain=<span style="color: #ffa07a;">'acm.timus.ru'</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   domain_specified=<span style="color: #00ffff; font-weight: bold;">False</span>, domain_initial_dot=<span style="color: #00ffff; font-weight: bold;">False</span>, path=<span style="color: #ffa07a;">'/'</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   path_specified=<span style="color: #00ffff; font-weight: bold;">True</span>, secure=<span style="color: #00ffff; font-weight: bold;">False</span>, expires=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   discard=<span style="color: #00ffff; font-weight: bold;">True</span>, comment=<span style="color: #7fffd4;">None</span>, comment_url=<span style="color: #7fffd4;">None</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   rest={<span style="color: #ffa07a;">'HttpOnly'</span>: <span style="color: #7fffd4;">None</span>}, rfc2109=<span style="color: #00ffff; font-weight: bold;">False</span>)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   cj.set_cookie(ck)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   data = urllib.urlencode({<span style="color: #ffa07a;">"Action"</span>: <span style="color: #ffa07a;">"edit"</span>,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"JudgeID"</span>: JUDGE_ID,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>    <span style="color: #ffa07a;">"Password"</span>: PASSWORD})
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   response = opener.open(AUTH_URL, data)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   OPENER = opener
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> opener
 </pre>
 </div>
 
@@ -346,7 +426,7 @@ cj.set_cookie(ck)
 </p>
 <div class="org-src-container">
 
-<pre class="src src-python" id="get_data"><span style="color: #eedd82;">fd</span> = opener.open(TASKS_URL)
+<pre class="src src-python" id="get_data"><span style="color: #eedd82;">fd</span> = get_opener().open(TASKS_URL)
 </pre>
 </div>
 
@@ -364,22 +444,22 @@ cj.set_cookie(ck)
 </p>
 <div class="org-src-container">
 
-<pre class="src src-python" id="get_content"><span style="color: #eedd82;">tasks_list</span> = doc.body.find_class(<span style="color: #ffa07a;">'content'</span>)
+<pre class="src src-python" id="get_content"><span style="color: #eedd82;">raw_tasks_list</span> = doc.body.find_class(<span style="color: #ffa07a;">'content'</span>)
 </pre>
 </div>
 
 <p>
-Мы будем хранить наши записи в дикте вида
-{Номер: [статус(True|False), название(String), стоимость(Integer)]}
+Мы будем хранить наши записи в списке вида
+[Номер(Integer), статус(True|False), название(String), стоимость(Integer)]
 Среди прочих нам попадётся строчка таблицы заголовок, её нужно пропустить
 </p>
 <div class="org-src-container">
 
-<pre class="src src-python" id="create_dict"><span style="color: #eedd82;">tasks_dict</span> = {}
-<span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> tasks_list:
+<pre class="src src-python" id="create_tasks_list"><span style="color: #eedd82;">tasks_list</span> = []
+<span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> raw_tasks_list:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> task[0].tag == <span style="color: #ffa07a;">'th'</span>:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">continue</span>
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   tasks_dict.update(fill_dict(task))
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   tasks_list += [get_task_line(task)]
 </pre>
 </div>
 
@@ -401,13 +481,16 @@ cj.set_cookie(ck)
 
 <div class="org-src-container">
 
-<pre class="src src-python" id="fill_dict"><span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">fill_dict</span>(task):
+<pre class="src src-python" id="get_task_line"><span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_task_line</span>(task):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #ffa07a;">"""</span>
+<span style="color: #ffa07a;">    XMLElement -&gt; [String, Bool, String, String]</span>
+<span style="color: #ffa07a;">    """</span>
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status, num, name, <span style="color: #b0c4de;">_</span>, <span style="color: #b0c4de;">_</span>, price = task.getchildren()
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> status.find(<span style="color: #ffa07a;">'a'</span>) <span style="color: #00ffff; font-weight: bold;">is</span> <span style="color: #00ffff; font-weight: bold;">not</span> <span style="color: #7fffd4;">None</span>:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status = <span style="color: #ffa07a;">'ok.gif'</span> <span style="color: #00ffff; font-weight: bold;">in</span> status.find(<span style="color: #ffa07a;">'a'</span>).find(<span style="color: #ffa07a;">'img'</span>).attrib.get(<span style="color: #ffa07a;">'src'</span>)
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">else</span>:
 <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status = <span style="color: #00ffff; font-weight: bold;">False</span>
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> {num.text_content(): [status, name.text_content(), price.text_content<span style="color: #DC8CC3; background-color: #3F3F3F;">()]}</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> [num.text_content(), status, name.text_content(), price.text_content(<span style="color: #DC8CC3; background-color: #3F3F3F;">)]</span>
 </pre>
 </div>
 
@@ -416,8 +499,92 @@ cj.set_cookie(ck)
 </p>
 <div class="org-src-container">
 
-<pre class="src src-python" id="create_org"><span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> tasks_dict:
-<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   logging.debug(u<span style="color: #ffa07a;">'%s: %s'</span> % (task, tasks_dict[task]))
+<pre class="src src-python" id="create_org"><span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">create_task</span>(num, status, name, price):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   document[num] = Task(num, status, name, price)
+
+<span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> tasks_list:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   create_task(*task)
+
+<span style="color: #00ffff; font-weight: bold;">for</span> task <span style="color: #00ffff; font-weight: bold;">in</span> <span style="color: #b0c4de;">sorted</span>(document, key=<span style="color: #00ffff; font-weight: bold;">lambda</span> x: <span style="color: #b0c4de;">int</span>(document[x].price)):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   template += <span style="color: #ffa07a;">"\n"</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   template += document[task].get_task()
+</pre>
+</div>
+
+<p>
+Для хранения всего документа создадим класс записей задач
+</p>
+<div class="org-src-container">
+
+<pre class="src src-python" id="objects"><span style="color: #eedd82;">document</span> = {}
+
+<span style="color: #00ffff; font-weight: bold;">class</span> <span style="color: #98fb98;">Task</span>(<span style="color: #b0c4de;">object</span>):
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">__init__</span>(<span style="color: #00ffff; font-weight: bold;">self</span>, num, status, name, price):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">self</span>.num = <span style="color: #b0c4de;">int</span>(num)
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">self</span>.status = status
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">self</span>.name = name
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">self</span>.price = price
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #98fb98;">@property</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">url</span>(<span style="color: #00ffff; font-weight: bold;">self</span>):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> PROBLEM_URL + <span style="color: #ffa07a;">"?num=%d"</span> % <span style="color: #00ffff; font-weight: bold;">self</span>.num
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">__str__</span>(<span style="color: #00ffff; font-weight: bold;">self</span>):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> u<span style="color: #ffa07a;">"{num} {status} {name} {price}"</span>.format(
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   num=<span style="color: #00ffff; font-weight: bold;">self</span>.num, status=<span style="color: #00ffff; font-weight: bold;">self</span>.status, name=<span style="color: #00ffff; font-weight: bold;">self</span>.name,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   price=<span style="color: #00ffff; font-weight: bold;">self</span>.price)
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   &lt;&lt;get_task&gt;&gt;
+
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   &lt;&lt;get_problem&gt;&gt;
+</pre>
+</div>
+
+<p>
+Функция, возвращающая для каждой задачи запись в org-файл
+</p>
+<div class="org-src-container">
+
+<pre class="src src-python" id="get_task"><span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_task</span>(<span style="color: #00ffff; font-weight: bold;">self</span>):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> <span style="color: #ffa07a;">u"""* {status} {name:&lt;40}:{price}:\n{problem}\n{curl_query}"""</span>.format<span style="color: #DC8CC3; background-color: #3F3F3F;">(</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   status=<span style="color: #00ffff; font-weight: bold;">self</span>.status <span style="color: #00ffff; font-weight: bold;">and</span> u<span style="color: #ffa07a;">"DONE"</span> <span style="color: #00ffff; font-weight: bold;">or</span> u<span style="color: #ffa07a;">"TODO"</span>, name=<span style="color: #00ffff; font-weight: bold;">self</span>.name,
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   price=<span style="color: #00ffff; font-weight: bold;">self</span>.price, problem=<span style="color: #00ffff; font-weight: bold;">self</span>.get_problem(),
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   curl_query=u<span style="color: #ffa07a;">"{curl-query}"</span>)
+</pre>
+</div>
+
+<p>
+Получаем описание задачи с сайта
+</p>
+<div class="org-src-container">
+
+<pre class="src src-python" id="get_problem"><span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">table_to_org</span>(<span style="color: #00ffff; font-weight: bold;">self</span>, table):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> table.text_content()
+
+<span style="color: #00ffff; font-weight: bold;">def</span> <span style="color: #87cefa;">get_problem</span>(<span style="color: #00ffff; font-weight: bold;">self</span>):
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   opener = get_opener()
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   doc = html.fromstring(opener.open(<span style="color: #00ffff; font-weight: bold;">self</span>.url).read())
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   problem_text = u<span style="color: #ffa07a;">""</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">try</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   problem_body = doc.xpath(<span style="color: #ffa07a;">"//div[contains(@id,'problem_text')]"</span>)[0]
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">except</span> <span style="color: #98fb98;">IndexError</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   logging.debug(<span style="color: #ffa07a;">'Problem no. {num} has no problem text'</span>.format(num=<span style="color: #00ffff; font-weight: bold;">self</span>.nu<span style="color: #DC8CC3; background-color: #3F3F3F;">m))</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">else</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">for</span> element <span style="color: #00ffff; font-weight: bold;">in</span> problem_body:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> element.tag == <span style="color: #ffa07a;">"div"</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">if</span> <span style="color: #ffa07a;">'problem_source'</span> <span style="color: #00ffff; font-weight: bold;">in</span> element:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">continue</span>
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   problem_text += u<span style="color: #ffa07a;">"{text}\n"</span>.format(
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   text=element.text_content())
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">elif</span> element.tag == <span style="color: #ffa07a;">"h3"</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   problem_text += u<span style="color: #ffa07a;">"** {text}\n"</span>.format(
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   text=element.text_content())
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">elif</span> element.tag == <span style="color: #ffa07a;">"table"</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   problem_text += u<span style="color: #ffa07a;">"{text}\n"</span>.format(
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   text=<span style="color: #00ffff; font-weight: bold;">self</span>.table_to_org(element))
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">finally</span>:
+<span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #DCDCCC; background-color: #4F4F4F;"> </span>   <span style="color: #00ffff; font-weight: bold;">return</span> problem_text
 </pre>
 </div>
 </div>
@@ -425,7 +592,7 @@ cj.set_cookie(ck)
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: pimiento</p>
-<p class="date">Created: 2013-10-02 Ср. 15:03</p>
+<p class="date">Created: 2013-10-14 Пн. 17:13</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 24.1.1 (<a href="http://orgmode.org">Org</a> mode 8.1.2)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
