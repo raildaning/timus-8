@@ -13,6 +13,9 @@ TASKS_URL = TIMUS_URL + "problemset.aspx?page=all"
 AUTH_URL = TIMUS_URL + "authedit.aspx"
 PROBLEM_URL = TIMUS_URL + "problem.aspx"
 CONFIG_PATH = "./crawler.conf"
+JUDGE_ID = "MYID"
+PASSWORD = "PASSWORD"
+SORT_BY = "num"
 OPENER = None
 
 with open('./template.org', 'r') as template_file:
@@ -47,7 +50,38 @@ class Task(object):
             curl_query=u"{curl-query}")
 
     def table_to_org(self, table):
-        return table.text_content()
+        get_lines = map(
+            lambda xl: map(lambda x: x.text_content(), xl),
+            table.getchildren())
+    
+        def get_maxlen(lst):
+            linelen = lambda line: reduce(lambda x,y: x+y, map(lambda l: l.split('\n'), line))
+            maxline = lambda x, y: len(x) > len(y) and x or y
+            catlinelen = lambda x, y: linelen(x) + linelen(y)
+            return len(reduce(maxline, reduce(catlinelen, lst)))
+    
+        def get_row_string(row, length):
+            lines_count = reduce(max, map(lambda l: len(l.strip().split('\n')), row))
+            lines = [x.split('\n') for x in row]
+            table_lines = []
+        
+            def get_n_line(line, i):
+                try:
+                    l = line.__getitem__(i)
+                except IndexError:
+                    l = ""
+                return u" {l:{length}} ".format(l=l.strip(), length=length)
+        
+            for i in xrange(lines_count):
+                t_line = '|'.join(map(lambda line: get_n_line(line, i), lines))
+                table_lines.append(u"|{0}|".format(t_line))
+        
+            hline = u"-" * len(table_lines[0])
+            ceil = "\n".join(table_lines)
+            return u"{hline}\n{ceil}\n{hline}".format(hline=hline, ceil=ceil)
+    
+        maxlen = get_maxlen(get_lines)
+        return '\n'.join(map(lambda row: get_row_string(row, maxlen)), get_lines)
     
     def get_problem(self):
         opener = get_opener()
@@ -60,7 +94,7 @@ class Task(object):
         else:
             for element in problem_body:
                 if element.tag == "div":
-                    if 'problem_source' in element:
+                    if 'problem_source' in element.attrib:
                         continue
                     problem_text += u"{text}\n".format(
                         text=element.text_content())
@@ -81,11 +115,9 @@ def get_secrets():
     raise IOError("%s is absent!" % CONFIG_PATH)
 
 def parse_config(config):
-    JUDGE_ID = ""
-    PASSWORD = ""
     judgeid_regexp = re.compile(r'^JUDGE_ID')
     password_regexp = re.compile(r'^PASSWORD')
-    sort_by_regexp = re.compile(r'^SORTED')
+    sort_by_regexp = re.compile(r'^SORT_BY')
     comment_regexp = re.compile(r'^#')
     for line in config:
         if comment_regexp.match(line):
@@ -101,9 +133,7 @@ def parse_config(config):
 try:
     JUDGE_ID, PASSWORD, SORT_BY = get_secrets()
 except IOError, e:
-    JUDGE_ID = "MYID"
-    PASSWORD = "PASSWORD"
-    SORT_BY = 'num'
+    pass
 
 
 def get_task_line(task):
