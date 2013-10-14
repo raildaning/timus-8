@@ -85,6 +85,7 @@ def parse_config(config):
     PASSWORD = ""
     judgeid_regexp = re.compile(r'^JUDGE_ID')
     password_regexp = re.compile(r'^PASSWORD')
+    sort_by_regexp = re.compile(r'^SORTED')
     comment_regexp = re.compile(r'^#')
     for line in config:
         if comment_regexp.match(line):
@@ -93,13 +94,16 @@ def parse_config(config):
             JUDGE_ID = line.split(':')[1].strip()
         if password_regexp.match(line):
             PASSWORD = line.split(':')[1].strip()
-    return JUDGE_ID, PASSWORD
+        if sort_by_regexp.match(line):
+            SORT_BY = line.split(':')[1].strip()
+    return JUDGE_ID, PASSWORD, SORT_BY
 
 try:
-    JUDGE_ID, PASSWORD = get_secrets()
+    JUDGE_ID, PASSWORD, SORT_BY = get_secrets()
 except IOError, e:
     JUDGE_ID = "MYID"
     PASSWORD = "PASSWORD"
+    SORT_BY = 'num'
 
 
 def get_task_line(task):
@@ -151,6 +155,10 @@ def create_task(num, status, name, price):
 for task in tasks_list:
     create_task(*task)
 
-for task in sorted(document, key=lambda x: int(document[x].price)):
+for task in sorted(document,
+                   key=lambda x: int(document[x].__getattribute__(SORT_BY))):
     template += "\n"
     template += document[task].get_task()
+
+with open('./tasks_list.org', 'w') as org_file:
+    org_file.write(template.encode('utf-8'))

@@ -41,3 +41,5 @@ nosetests.xml
 .pydevproject
 
 crawler.conf
+
+tasks_list.org
