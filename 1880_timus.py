@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-u"""
+"""
 Входные данные состоят из трёх блоков по две строки. Первая строка каждого блока
 содержит целое число n —количество собственных чисел очередного игрока
 (1 ≤ n ≤ 4 000). Во второй строке блока записано n целых различных чисел
@@ -13,8 +13,10 @@ def appnd(n):
     if n == 0:
         return []
     else:
-        count = int(raw_input())
-        return [int(x) for x in raw_input().split()][:count] + appnd(n-1)
+        count = int(input())
+        if count == 0:
+            return [] + appnd(n-1)
+        return [int(x) for x in input().split()][:count] + appnd(n-1)
 
 def three_counter(lst):
     if lst == []:
@@ -37,4 +39,5 @@ def cln(elem, lst):
         else:
             return [lst[0]] + cln(elem, lst[1:])
 
-print(three_counter(appnd(3)))
+lst = appnd(3)
+print(three_counter(lst))
